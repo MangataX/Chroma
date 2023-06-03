@@ -1,0 +1,59 @@
+// 用来控制音效和场景切换
+class GameController : public QObject
+{
+    Q_OBJECT
+public:
+    GameController(Game *game, QObject *parent = nullptr);
+public slots:
+    void playFootstepSound(); // 播放脚步声
+    void playInteractionSound(); // 播放交互声
+    void changeScene(); // 切换场景
+private:
+    Game *m_game; // 游戏对象
+    QMediaPlayer *m_player; // 媒体播放器，用来播放音效
+    QPropertyAnimation *m_sceneAnimation; // 属性动画，用来控制场景的渐隐渐显效果
+
+    // 连接游戏对象的信号和槽，实现人物向左走时显示左侧面，向右走时显示右侧面的功能
+    connect(m_game, &Game::playerMovedLeft, [this](){
+        m_game->player()->setPixmap(QPixmap(":/images/player_left.png")); // 设置人物图片为左侧面
+    });
+    connect(m_game, &Game::playerMovedRight, [this](){
+        m_game->player()->setPixmap(QPixmap(":/images/player_right.png")); // 设置人物图片为右侧面
+    });
+
+    // 连接游戏对象的信号和槽，实现对话框文字显示为逐字滚动显现的功能
+    connect(m_game, &Game::dialogTextChanged, [this](){
+        m_game->dialogBox()->showTextByChar(); // 调用对话框对象的方法，逐字显示文字
+    });
+}
+
+// 播放脚步声
+void GameController::playFootstepSound()
+{
+    m_player->setSource(QUrl("qrc:/sounds/footstep.wav")); // 设置音效源为脚步声文件
+    m_player->play(); // 播放音效
+}
+
+// 播放交互声
+void GameController::playInteractionSound()
+{
+    m_player->setSource(QUrl("qrc:/sounds/interaction.wav")); // 设置音效源为交互声文件
+    m_player->play(); // 播放音效
+}
+
+// 切换场景
+void GameController::changeScene()
+{
+    m_sceneAnimation->setTargetObject(m_game->scene()); // 设置属性动画的目标对象为游戏场景对象
+    m_sceneAnimation->setPropertyName("opacity"); // 设置属性动画的目标属性为透明度
+    m_sceneAnimation->setDuration(1000); // 设置属性动画的持续时间为1秒
+    m_sceneAnimation->setStartValue(1.0); // 设置属性动画的起始值为1.0（完全不透明）
+    m_sceneAnimation->setEndValue(0.0); // 设置属性动画的结束值为0.0（完全透明）
+    m_sceneAnimation->start(); // 开始属性动画
+
+    // 在属性动画结束后，切换场景并恢复透明度
+    connect(m_sceneAnimation, &QPropertyAnimation::finished, [this](){
+        // 这里可以根据需求切换不同的场景，比如加载不同的图片或者文件等等
+        m_game->scene()->setOpacity(1.0); // 恢复透明度为1.0（完全不透明）
+    });
+}
